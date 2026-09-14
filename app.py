@@ -2,29 +2,45 @@ import streamlit as st
 import subprocess
 import tempfile
 import os
+import librosa
+import soundfile as sf
 
-st.set_page_config(page_title="C++ AI Audio Mixer", page_icon="🎧", layout="centered")
+st.set_page_config(page_title="C++ Powered AI Audio Mixer", page_icon="🎧", layout="centered")
 
 st.title("🎧 C++ Powered AI Audio Mixer")
-st.write("C++ මඟින් ධාවනය වන වේගවත් සහ නිවැරදි ඕඩියෝ මිශ්‍රණ යන්ත්‍රය.")
+st.write("MP3 හෝ WAV ඕනෑම සින්දුවක් එකතු කර C++ එන්ජිම හරහා වේගයෙන් මිශ්‍ර කරන්න!")
 
-uploaded_file1 = st.file_uploader("පළමු සින්දුව (WAV)", type=["wav"])
-uploaded_file2 = st.file_uploader("දෙවන සින්දුව (WAV)", type=["wav"])
+uploaded_file1 = st.file_uploader("පළමු සින්දුව (MP3 / WAV)", type=["mp3", "wav"])
+uploaded_file2 = st.file_uploader("දෙවන සින්දුව (MP3 / WAV)", type=["mp3", "wav"])
 
 if st.button("🚀 Mix with C++ Engine", type="primary"):
     if uploaded_file1 and uploaded_file2:
-        with st.spinner("C++ එන්ජිම හරහා ඕඩියෝ ප්‍රොසෙස් වෙමින් පවතී..."):
+        with st.spinner("සින්දු ෆයිල්ස් ප්‍රොසෙස් කර C++ එන්ජිමට සූදානම් කරමින් පවතී..."):
             with tempfile.TemporaryDirectory() as tmpdir:
+                raw_path1 = os.path.join(tmpdir, "raw1")
+                raw_path2 = os.path.join(tmpdir, "raw2")
+                
+                with open(raw_path1, "wb") as f:
+                    f.write(uploaded_file1.getbuffer())
+                with open(raw_path2, "wb") as f:
+                    f.write(uploaded_file2.getbuffer())
+
                 path1 = os.path.join(tmpdir, "song1.wav")
                 path2 = os.path.join(tmpdir, "song2.wav")
                 out_path = os.path.join(tmpdir, "output.wav")
 
-                with open(path1, "wb") as f:
-                    f.write(uploaded_file1.getbuffer())
-                with open(path2, "wb") as f:
-                    f.write(uploaded_file2.getbuffer())
+                try:
+                    # Convert any uploaded MP3/WAV to standard WAV format for C++
+                    y1, sr1 = librosa.load(raw_path1, sr=22050)
+                    sf.write(path1, y1, sr1)
 
-                # Compile C++ mixer on the fly inside Streamlit environment
+                    y2, sr2 = librosa.load(raw_path2, sr=22050)
+                    sf.write(path2, y2, sr2)
+                except Exception as e:
+                    st.error(f"ඕඩියෝ ෆයිල් කියවීමේ දෝෂයක්: {e}")
+                    st.stop()
+
+                # Compile C++ mixer on the fly
                 compile_cmd = "g++ -o mixer mixer.cpp -lsndfile"
                 compile_res = os.system(compile_cmd)
 
@@ -44,4 +60,4 @@ if st.button("🚀 Mix with C++ Engine", type="primary"):
                 else:
                     st.error("C++ කෝඩ් එක Compile කරගැනීමේ දෝෂයක් (g++ / libsndfile missing).")
     else:
-        st.warning("කරුණාකර WAV සින්දු ෆයිල් දෙකම Upload කරන්න!")
+        st.warning("කරුණාකර සින්දු ෆයිල් දෙකම Upload කරන්න!")
