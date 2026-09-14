@@ -1,2 +1,2 @@
-libsndfile1
 build-essential
+libsndfile1-dev
